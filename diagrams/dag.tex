@@ -1,0 +1,87 @@
+\documentclass[border=10pt]{standalone}
+\usepackage{newtxtext, newtxmath}
+\usepackage{tikz}
+\usetikzlibrary{bayesnet}
+
+\begin{document}
+\begin{tikzpicture}
+    
+    %%% define layer 1 %%%
+    % density
+    \node[obs] (dens) {$\log_{10}\Sigma$};
+    % density distribution
+    \factor[above=of dens] {dens_D} {right:$\mathcal{N}_\mathrm{likelihood}$} {} {};
+    % calculated density
+    \node[det, above=of dens_D] (dens_hat) {$\log_{10}\hat{\Sigma}$}; 
+    % radius
+    \node[obs, above=of dens_hat] (R) {$R$};
+    % density error
+    \node[latent, right=of dens_hat, yshift=-3em, xshift=-3em] (dens_err) {$\tau_{\log_{10}\Sigma}$};
+
+    % connect
+    \factoredge{dens_hat, dens_err} {dens_D} {dens};
+    \edge {R} {dens_hat};
+    % add the plate
+    \plate{level1} {(R)(dens_hat)(dens_err)(dens_D)(dens)} {$\forall\; R$};
+
+
+    %%% define layer 2 %%%
+    % break density
+    \node[latent, left=of dens_hat, yshift=10em] (dens_b) {$\log_{10}\Sigma_\mathrm{b}$};
+    % inner core slope
+    \node[latent, below=of dens_b] (g) {$\gamma$};
+    % sersic index
+    \node[latent, below=of g] (n) {$n$};
+    % transition index
+    \node[latent, below=of n] (a) {$\alpha$};
+    % core radius
+    \node[latent, below=of a] (rb) {$r_\mathrm{b}$};
+    % effective radius
+    \node[latent, below=of rb] (Re) {$R_\mathrm{e}$};
+
+    % connect
+    \edge{dens_b, g, n, a, rb, Re} {dens_hat};
+    % add the plate
+    \plate{level2} {(dens_b)(g)(n)(a)(rb)(Re)(level1)} {$\forall\; \mathrm{projections}$};
+
+    %%% define layer 3 %%%
+    % break radius hypers
+    \factor[left=of dens_b, xshift=-0.7em] {dens_b_D} {below:$\mathcal{N}_\mathrm{T[-5,15]}$} {} {};
+    \node[hyper, left=of dens_b_D, yshift=2em] (dens_b_mu) {$\mu_{\log_{10}\Sigma_\mathrm{b}}$};
+    \node[hyper, below=of dens_b_mu, yshift=2em] (dens_b_err) {$\sigma_{\log_{10}\Sigma_\mathrm{b}}$};
+    \factoredge{dens_b_mu, dens_b_err} {dens_b_D} {dens_b};
+
+    % inner slope hypers
+    \factor[left=of g, xshift=-1.5em] {g_D} {below:$\mathrm{Exp}_\mathrm{T[0,1]}$} {} {};
+    \node[hyper, left=of g_D] (g_lam) {$\lambda_\gamma$};
+    \factoredge{g_lam} {g_D} {g};
+
+    % sersic index hypers
+    \factor[left=of n, xshift=-1.5em] {n_D} {below:$\mathcal{N}_\mathrm{T[0,20]}$} {} {};
+    \node[hyper, left=of n_D, yshift=1em] (n_mu) {$\mu_{n}$};
+    \node[hyper, below=of n_mu, yshift=2em] (n_err) {$\sigma_{n}$};
+    \factoredge{n_mu, n_err} {n_D} {n};
+
+    % transition index hypers
+    \factor[left=of a, xshift=-1.5em] {a_D} {below:$\mathrm{Ray}_\mathrm{T[0,15]}$} {} {};
+    \node[hyper, left=of a_D] (a_sig) {$\sigma_\alpha$};
+    \factoredge{a_sig} {a_D} {a};
+
+    % core radius hypers
+    \factor[left=of rb, xshift=-1.5em] {rb_D} {below:$\mathrm{Ray}_\mathrm{T[0,5]}$} {} {};
+    \node[hyper, left=of rb_D] (rb_sig) {$\sigma_{r_\mathrm{b}}$};
+    \factoredge{rb_sig} {rb_D} {rb};
+
+    % effective radius hypers
+    \factor[left=of Re, xshift=-1.5em] {Re_D} {below:$\mathrm{Ray}_\mathrm{T[0,20]}$} {} {};
+    \node[hyper, left=of Re_D] (Re_sig) {$\sigma_{R_\mathrm{e}}$};
+    \factoredge{Re_sig} {Re_D} {Re};
+
+    % surface density error hypers
+    \factor[above=of dens_err, yshift=4em] {dens_err_D} {left:$\mathcal{N}_\mathrm{T[0,]}$} {} {};
+    \node[hyper, above=of dens_err_D, yshift=6em] (dens_err_err) {$\sigma_{\tau_{\log_{10}\Sigma}}$};
+    \node[hyper, left=of dens_err_err] (dens_err_mu) {$\mu_{\tau_{\log_{10}\Sigma}}$};
+    \factoredge{dens_err_mu, dens_err_err} {dens_err_D} {dens_err};
+
+\end{tikzpicture}
+\end{document}
